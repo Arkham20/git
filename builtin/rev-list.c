@@ -372,7 +372,8 @@ static inline int parse_missing_action_value(const char *value)
 	return 0;
 }
 
-static int try_bitmap_count(struct rev_info *revs)
+static int try_bitmap_count(struct rev_info *revs,
+			    struct list_objects_filter_options *filter)
 {
 	uint32_t commit_count = 0,
 		 tag_count = 0,
@@ -407,7 +408,7 @@ static int try_bitmap_count(struct rev_info *revs)
 	 */
 	max_count = revs->max_count;
 
-	bitmap_git = prepare_bitmap_walk(revs, NULL);
+	bitmap_git = prepare_bitmap_walk(revs, filter);
 	if (!bitmap_git)
 		return -1;
 
@@ -423,7 +424,8 @@ static int try_bitmap_count(struct rev_info *revs)
 	return 0;
 }
 
-static int try_bitmap_traversal(struct rev_info *revs)
+static int try_bitmap_traversal(struct rev_info *revs,
+				struct list_objects_filter_options *filter)
 {
 	struct bitmap_index *bitmap_git;
 
@@ -441,7 +443,7 @@ static int try_bitmap_traversal(struct rev_info *revs)
 	if (!revs->tag_objects || !revs->tree_objects || !revs->blob_objects)
 		return -1;
 
-	bitmap_git = prepare_bitmap_walk(revs, NULL);
+	bitmap_git = prepare_bitmap_walk(revs, filter);
 	if (!bitmap_git)
 		return -1;
 
@@ -612,7 +614,7 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 	    (revs.left_right || revs.cherry_mark))
 		die(_("marked counting is incompatible with --objects"));
 
-	if (filter_options.choice || revs.prune)
+	if (revs.prune)
 		use_bitmap_index = 0;
 
 	save_commit_buffer = (revs.verbose_header ||
@@ -625,9 +627,9 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 		progress = start_delayed_progress(show_progress, 0);
 
 	if (use_bitmap_index) {
-		if (!try_bitmap_count(&revs))
+		if (!try_bitmap_count(&revs, &filter_options))
 			return 0;
-		if (!try_bitmap_traversal(&revs))
+		if (!try_bitmap_traversal(&revs, &filter_options))
 			return 0;
 	}
 

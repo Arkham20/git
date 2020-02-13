@@ -12,6 +12,7 @@
 #include "packfile.h"
 #include "repository.h"
 #include "object-store.h"
+#include "list-objects-filter-options.h"
 
 /*
  * An entry on the bitmap index, representing the bitmap for a given
@@ -705,7 +706,25 @@ static int in_bitmapped_pack(struct bitmap_index *bitmap_git,
 	return 0;
 }
 
-struct bitmap_index *prepare_bitmap_walk(struct rev_info *revs)
+static int filter_bitmap(struct bitmap_index *bitmap_git,
+			 struct object_list *tip_objects,
+			 struct bitmap *to_filter,
+			 struct list_objects_filter_options *filter)
+{
+	if (!filter || filter->choice == LOFC_DISABLED)
+		return 0;
+
+	/* filter choice not handled */
+	return -1;
+}
+
+static int can_filter_bitmap(struct list_objects_filter_options *filter)
+{
+	return !filter_bitmap(NULL, NULL, NULL, filter);
+}
+
+struct bitmap_index *prepare_bitmap_walk(struct rev_info *revs,
+					 struct list_objects_filter_options *filter)
 {
 	unsigned int i;
 
@@ -715,9 +734,14 @@ struct bitmap_index *prepare_bitmap_walk(struct rev_info *revs)
 	struct bitmap *wants_bitmap = NULL;
 	struct bitmap *haves_bitmap = NULL;
 
-	struct bitmap_index *bitmap_git = xcalloc(1, sizeof(*bitmap_git));
+	struct bitmap_index *bitmap_git;
+
+	if (!can_filter_bitmap(filter))
+		return NULL;
+
 	/* try to open a bitmapped pack, but don't parse it yet
 	 * because we may not need to use it */
+	bitmap_git = xcalloc(1, sizeof(*bitmap_git));
 	if (open_pack_bitmap(revs->repo, bitmap_git) < 0)
 		goto cleanup;
 
@@ -783,6 +807,8 @@ struct bitmap_index *prepare_bitmap_walk(struct rev_info *revs)
 
 	if (haves_bitmap)
 		bitmap_and_not(wants_bitmap, haves_bitmap);
+
+	filter_bitmap(bitmap_git, wants, wants_bitmap, filter);
 
 	bitmap_git->result = wants_bitmap;
 	bitmap_git->haves = haves_bitmap;

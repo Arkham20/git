@@ -407,7 +407,7 @@ static int try_bitmap_count(struct rev_info *revs)
 	 */
 	max_count = revs->max_count;
 
-	bitmap_git = prepare_bitmap_walk(revs);
+	bitmap_git = prepare_bitmap_walk(revs, NULL);
 	if (!bitmap_git)
 		return -1;
 
@@ -441,7 +441,7 @@ static int try_bitmap_traversal(struct rev_info *revs)
 	if (!revs->tag_objects || !revs->tree_objects || !revs->blob_objects)
 		return -1;
 
-	bitmap_git = prepare_bitmap_walk(revs);
+	bitmap_git = prepare_bitmap_walk(revs, NULL);
 	if (!bitmap_git)
 		return -1;
 
